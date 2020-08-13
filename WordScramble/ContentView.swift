@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var usedWords = [String]()
     @State private var rootWord = ""
     @State private var newWord = ""
+    @State private var score = 0
     
     @State private var errorTitle = ""
     @State private var errorMessage = ""
@@ -29,8 +30,13 @@ struct ContentView: View {
                     Image(systemName: "\($0.count).circle")
                     Text($0)
                 }
+                
+                Text("Score: \(score)")
             }
         .navigationBarTitle(rootWord)
+            .navigationBarItems(leading: Button(action: startGame){
+                Text("Restart")
+            })
         .onAppear(perform: startGame)
             .alert(isPresented: $showingError) {
                 Alert(title: Text(errorTitle), message: Text(errorMessage), dismissButton: .default(Text("OK")))
@@ -46,13 +52,23 @@ struct ContentView: View {
             return
         }
         
+        guard isLongEnough(word: answer) else {
+            wordError(title: "Word not long enough", message: "Only words that are at least 3 letters long can be used.")
+            return
+        }
+        
+        guard isNotRootWord(word: answer) else {
+            wordError(title: "That's the root word", message: "You can't use the root word.  That's just plain lazy!")
+            return
+        }
+        
         guard isOriginal(word: answer) else {
-            wordError(title: "Word used already", message: "Be more original")
+            wordError(title: "Word used already", message: "Be more original.")
             return
         }
         
         guard isPossible(word: answer) else {
-            wordError(title: "Word not recognised", message: "You can't just make them up, you know!")
+            wordError(title: "Word not recognised", message: "You need to make word from the word provided! You can't just make them up, you know!")
             return
         }
         
@@ -61,11 +77,16 @@ struct ContentView: View {
             return
         }
         
+        score += answer.count
+        
         usedWords.insert(answer, at: 0)
         newWord = ""
     }
     
     func startGame() {
+        score = 0
+        usedWords.removeAll()
+        
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
@@ -103,6 +124,14 @@ struct ContentView: View {
         let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en")
         
         return misspelledRange.location == NSNotFound
+    }
+    
+    func isLongEnough(word: String) -> Bool {
+        word.count >= 3
+    }
+    
+    func isNotRootWord(word: String) -> Bool {
+        word != rootWord
     }
     
     func wordError(title: String, message: String) {
